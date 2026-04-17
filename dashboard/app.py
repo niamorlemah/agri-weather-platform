@@ -142,14 +142,30 @@ selected_graphs = st.sidebar.multiselect(
 )
 
 # =====================================================
-# DATE
+# DATES
 # =====================================================
+
+df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
+# supprimer dates invalides
+df = df.dropna(subset=["timestamp"])
+
+if df.empty:
+    st.warning("Aucune donnée datée disponible.")
+    st.stop()
+
 today = date.today()
 
 min_day = df["timestamp"].min().date()
 max_day = df["timestamp"].max().date()
 
-default_day = min(max(today, min_day), max_day)
+default_day = today
+
+if default_day < min_day:
+    default_day = min_day
+
+if default_day > max_day:
+    default_day = max_day
 
 date_range = st.sidebar.date_input(
     "📅 Jour ou période",
@@ -158,17 +174,15 @@ date_range = st.sidebar.date_input(
     max_value=max_day
 )
 
-# 1 seule date sélectionnée
+# gestion 1 date ou période
 if not isinstance(date_range, tuple):
     start_date = date_range
     end_date = date_range
 
-# tuple de 1 élément
 elif len(date_range) == 1:
     start_date = date_range[0]
     end_date = date_range[0]
 
-# vraie période
 else:
     start_date = date_range[0]
     end_date = date_range[1]
