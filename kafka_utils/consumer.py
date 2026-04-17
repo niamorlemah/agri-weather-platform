@@ -8,10 +8,12 @@ def consume_weather_batch():
     # Connexion PostgreSQL
     # ---------------------------
     conn = psycopg2.connect(
-        host="postgres",
-        database="weather_db",
-        user="airflow",
-        password="airflow"
+        host="ep-solitary-bread-abcld6jf-pooler.eu-west-2.aws.neon.tech",
+        database="neondb",
+        user="neondb_owner",
+        password="npg_n3UVze5wrWSR",
+        port=5432,
+        sslmode="require"
     )
     cursor = conn.cursor()
 

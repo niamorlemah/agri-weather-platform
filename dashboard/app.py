@@ -63,10 +63,12 @@ def icon_weather(description, temp=None, wind=None):
 def load_data():
 
     conn = psycopg2.connect(
-        host="localhost",
-        database="weather_db",
-        user="airflow",
-        password="airflow"
+        host=st.secrets["DB_HOST"],
+        database=st.secrets["DB_NAME"],
+        user=st.secrets["DB_USER"],
+        password=st.secrets["DB_PASSWORD"],
+        port=st.secrets["DB_PORT"],
+        sslmode="require"
     )
 
     query = """
