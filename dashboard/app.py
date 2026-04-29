@@ -189,27 +189,7 @@ def meteo_icon(txt):
 
 latest_df["icon"] = latest_df["description"].apply(meteo_icon)
 
-# =====================================================
-# A - CARTES PAR VILLE
-# =====================================================
 
-st.subheader("🌍 Conditions actuelles")
-
-cols = st.columns(len(latest_df))
-
-for i, (_, row) in enumerate(latest_df.iterrows()):
-
-    with cols[i]:
-        st.markdown(
-            f"""
-            ### {row['city']}
-            # {row['icon']} {row['temperature']:.1f}°C
-
-            Ressenti : {row['feels_like']:.1f}°C  
-            💨 {row['wind_speed']:.0f} km/h  
-            💧 {row['humidity']:.0f}%
-            """
-        )
 
 # =====================================================
 # B - TIMELINE DU JOUR
