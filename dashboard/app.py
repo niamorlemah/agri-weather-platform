@@ -158,43 +158,97 @@ if filtered_df.empty:
     st.stop()
 
 # =====================================================
-# KPI
+# APERÇU METEO PREMIUM
 # =====================================================
+
 latest_ts = filtered_df["forecast_time"].max()
 
 latest_df = filtered_df[
     filtered_df["forecast_time"] == latest_ts
-]
+].copy()
 
-c1, c2 = st.columns(2)
-c3, c4 = st.columns(2)
+# -----------------------------------------
+# ICONES
+# -----------------------------------------
+def meteo_icon(txt):
 
-with c1:
-    st.metric(
-        "🌡️ Temp",
-        f"{latest_df['temperature'].mean():.1f}°C"
-    )
+    txt = str(txt).lower()
 
-with c2:
-    st.metric(
-        "🥵 Ressenti",
-        f"{latest_df['feels_like'].mean():.1f}°C"
-    )
+    if "rain" in txt or "drizzle" in txt:
+        return "🌧️"
+    elif "cloud" in txt:
+        return "☁️"
+    elif "clear" in txt:
+        return "☀️"
+    elif "storm" in txt or "thunder" in txt:
+        return "⛈️"
+    elif "snow" in txt:
+        return "❄️"
+    else:
+        return "🌤️"
 
-with c3:
-    st.metric(
-        "💨 Vent",
-        f"{latest_df['wind_speed'].mean():.0f} km/h"
-    )
+latest_df["icon"] = latest_df["description"].apply(meteo_icon)
 
-with c4:
-    st.metric(
-        "💧 Humidité",
-        f"{latest_df['humidity'].mean():.0f}%"
-    )
+# =====================================================
+# A - CARTES PAR VILLE
+# =====================================================
+
+st.subheader("🌍 Conditions actuelles")
+
+cols = st.columns(len(latest_df))
+
+for i, (_, row) in enumerate(latest_df.iterrows()):
+
+    with cols[i]:
+        st.markdown(
+            f"""
+            ### {row['city']}
+            # {row['icon']} {row['temperature']:.1f}°C
+
+            Ressenti : {row['feels_like']:.1f}°C  
+            💨 {row['wind_speed']:.0f} km/h  
+            💧 {row['humidity']:.0f}%
+            """
+        )
+
+# =====================================================
+# B - TIMELINE DU JOUR
+# =====================================================
+
+st.subheader("📅 Prévisions du jour")
+
+today_df = filtered_df[
+    filtered_df["forecast_time"].dt.date == latest_ts.date()
+].copy()
+
+today_df["icon"] = today_df["description"].apply(meteo_icon)
+
+for city in selected_cities:
+
+    city_df = today_df[
+        today_df["city"] == city
+    ].sort_values("forecast_time")
+
+    if city_df.empty:
+        continue
+
+    st.markdown(f"### {city}")
+
+    cols = st.columns(len(city_df))
+
+    for i, (_, row) in enumerate(city_df.iterrows()):
+
+        with cols[i]:
+            st.markdown(
+                f"""
+                **{row['forecast_time'].strftime('%Hh')}**  
+                {row['icon']}  
+                **{row['temperature']:.0f}°**
+                """
+            )
 
 st.caption(
-    f"MAJ : {latest_ts.strftime('%d/%m/%Y %H:%M')}"
+    f"Dernière mise à jour : {latest_ts.strftime('%d/%m/%Y %H:%M')}"
 )
 
 st.divider()
