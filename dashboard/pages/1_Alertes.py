@@ -50,6 +50,18 @@ if df.empty:
 df["forecast_time"] = pd.to_datetime(df["forecast_time"], errors="coerce")
 df = df.dropna(subset=["forecast_time"])
 
+# =====================================================
+# FILTRE ALERTES : maintenant -> +5 jours
+# =====================================================
+
+now = pd.Timestamp.now()
+limit_date = now + pd.Timedelta(days=5)
+
+df = df[
+    (df["forecast_time"] >= now) &
+    (df["forecast_time"] <= limit_date)
+].copy()
+
 cities = sorted(df["city"].unique())
 
 selected = st.sidebar.multiselect(
