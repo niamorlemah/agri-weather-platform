@@ -102,8 +102,9 @@ if df.empty:
     st.stop()
 
 # =====================================================
-# SIDEBAR
+# SIDEBAR - 
 # =====================================================
+
 st.sidebar.header("⚙️ Filtres")
 
 cities = sorted(df["city"].unique())
@@ -112,6 +113,22 @@ selected_cities = st.sidebar.multiselect(
     "🏙️ Villes",
     cities,
     default=cities
+)
+
+sections = st.sidebar.multiselect(
+    "📱 Affichage",
+    [
+        "Conditions actuelles",
+        "Prévisions",
+        "Température",
+        "Précipitations",
+        "Alertes"
+    ],
+    default=[
+        "Conditions actuelles",
+        "Prévisions",
+        "Température"
+    ]
 )
 
 today = date.today()
@@ -302,7 +319,16 @@ with tab1:
         rangeslider_visible=False
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+    fig,
+    use_container_width=True,
+    config={
+        "displayModeBar": False,
+        "scrollZoom": False,
+        "doubleClick": False,
+        "staticPlot": False
+    }
+)
 
     # ---------------------------------
     # PRECIPITATIONS
@@ -349,7 +375,16 @@ with tab1:
         tickformat="%d/%m %H:%M"
     )
 
-    st.plotly_chart(rain_fig, use_container_width=True)
+    st.plotly_chart(
+    fig,
+    use_container_width=True,
+    config={
+        "displayModeBar": False,
+        "scrollZoom": False,
+        "doubleClick": False,
+        "staticPlot": False
+    }
+)
 
 # =====================================================
 # ALERTES
