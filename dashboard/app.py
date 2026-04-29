@@ -32,7 +32,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🌿 Agri Weather Platform")
-st.caption("Prévisions météo agricoles • Dashboard mobile premium")
+st.caption("Plateforme météo agricole • V3 Complete")
 
 # =====================================================
 # ICONES
@@ -54,7 +54,7 @@ def meteo_icon(txt):
     return "🌤️"
 
 # =====================================================
-# DB
+# LOAD DATA
 # =====================================================
 @st.cache_data(ttl=300)
 def load_data():
@@ -122,18 +122,34 @@ selected_cities = st.sidebar.multiselect(
 )
 
 sections = st.sidebar.multiselect(
-    "📱 Affichage",
+    "📱 Modules visibles",
     [
         "Conditions actuelles",
         "Prévisions",
-        "Température",
-        "Précipitations",
         "Alertes"
     ],
     default=[
         "Conditions actuelles",
-        "Prévisions",
-        "Température"
+        "Prévisions"
+    ]
+)
+
+graphs = st.sidebar.multiselect(
+    "📈 Graphiques",
+    [
+        "Température",
+        "Ressenti",
+        "Vent",
+        "Humidité",
+        "Pression",
+        "Précipitations",
+        "Nuages",
+        "Probabilité pluie"
+    ],
+    default=[
+        "Température",
+        "Précipitations",
+        "Vent"
     ]
 )
 
@@ -143,10 +159,8 @@ min_day = df["forecast_time"].min().date()
 max_day = df["forecast_time"].max().date()
 
 default_day = today
-
 if default_day < min_day:
     default_day = min_day
-
 if default_day > max_day:
     default_day = max_day
 
@@ -187,6 +201,15 @@ latest_df = filtered_df[
 ].copy()
 
 latest_df["icon"] = latest_df["description"].apply(meteo_icon)
+
+# =====================================================
+# COMMON GRAPH CONFIG
+# =====================================================
+plotly_config = {
+    "displayModeBar": False,
+    "scrollZoom": False,
+    "doubleClick": False
+}
 
 # =====================================================
 # CONDITIONS ACTUELLES
@@ -233,9 +256,7 @@ if "Prévisions" in sections:
 
         st.markdown(f"### {city}")
 
-        unique_days = city_df["forecast_time"].dt.date.unique()
-
-        for day in unique_days:
+        for day in city_df["forecast_time"].dt.date.unique():
 
             day_df = city_df[
                 city_df["forecast_time"].dt.date == day
@@ -258,48 +279,30 @@ if "Prévisions" in sections:
                         """
                     )
 
-            st.markdown("---")
-
 # =====================================================
-# TEMPERATURE
+# GRAPH FUNCTION
 # =====================================================
-if "Température" in sections:
+def draw_line_graph(title, column, unit):
 
-    st.subheader("🌡️ Température")
+    st.subheader(title)
 
     fig = px.line(
         filtered_df,
         x="forecast_time",
-        y="temperature",
+        y=column,
         color="city",
-        markers=True,
-        custom_data=[
-            "feels_like",
-            "humidity",
-            "wind_speed"
-        ]
-    )
-
-    fig.update_traces(
-        line=dict(width=3),
-        marker=dict(size=8),
-        hovertemplate=
-        "<b>%{fullData.name}</b><br>" +
-        "%{x}<br>" +
-        "Temp : %{y:.1f}°C<br>" +
-        "Ressenti : %{customdata[0]:.1f}°C<br>" +
-        "Humidité : %{customdata[1]:.0f}%<br>" +
-        "Vent : %{customdata[2]:.0f} km/h<br>" +
-        "<extra></extra>"
+        markers=True
     )
 
     fig.update_layout(
-        height=620,
+        height=520,
+        dragmode=False,
         legend=dict(
             orientation="h",
             y=-0.25
         ),
-        margin=dict(l=10, r=10, t=20, b=80)
+        margin=dict(l=10, r=10, t=20, b=80),
+        yaxis_title=unit
     )
 
     fig.update_xaxes(
@@ -310,60 +313,65 @@ if "Température" in sections:
     st.plotly_chart(
         fig,
         use_container_width=True,
-        config={
-            "displayModeBar": False,
-            "scrollZoom": False,
-            "doubleClick": False
-        }
+        config=plotly_config
     )
 
 # =====================================================
-# PRECIPITATIONS
+# GRAPHES
 # =====================================================
-if "Précipitations" in sections:
+if "Température" in graphs:
+    draw_line_graph("🌡️ Température", "temperature", "°C")
+
+if "Ressenti" in graphs:
+    draw_line_graph("🥵 Ressenti", "feels_like", "°C")
+
+if "Vent" in graphs:
+    draw_line_graph("💨 Vent", "wind_speed", "km/h")
+
+if "Humidité" in graphs:
+    draw_line_graph("💧 Humidité", "humidity", "%")
+
+if "Pression" in graphs:
+    draw_line_graph("🧭 Pression", "pressure", "hPa")
+
+if "Nuages" in graphs:
+    draw_line_graph("☁️ Nuages", "clouds", "%")
+
+if "Probabilité pluie" in graphs:
+    draw_line_graph("🎯 Probabilité pluie", "pop", "%")
+
+if "Précipitations" in graphs:
 
     st.subheader("🌧️ Précipitations")
 
-    fig2 = px.bar(
+    fig = px.bar(
         filtered_df,
         x="forecast_time",
         y="rain",
         color="city",
-        barmode="group",
-        custom_data=["pop"]
+        barmode="group"
     )
 
-    fig2.update_traces(
-        hovertemplate=
-        "<b>%{fullData.name}</b><br>" +
-        "%{x}<br>" +
-        "Pluie : %{y:.1f} mm<br>" +
-        "Probabilité : %{customdata[0]:.0%}<br>" +
-        "<extra></extra>"
-    )
-
-    fig2.update_layout(
+    fig.update_layout(
         height=520,
+        dragmode=False,
         legend=dict(
             orientation="h",
             y=-0.25
         ),
-        margin=dict(l=10, r=10, t=20, b=80)
+        margin=dict(l=10, r=10, t=20, b=80),
+        yaxis_title="mm"
     )
 
-    fig2.update_xaxes(
+    fig.update_xaxes(
         nticks=6,
         tickformat="%d/%m %H:%M"
     )
 
     st.plotly_chart(
-        fig2,
+        fig,
         use_container_width=True,
-        config={
-            "displayModeBar": False,
-            "scrollZoom": False,
-            "doubleClick": False
-        }
+        config=plotly_config
     )
 
 # =====================================================
