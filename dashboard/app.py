@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import date
 
 # =====================================================
-# CONFIG
+# PAGE CONFIG
 # =====================================================
 st.set_page_config(
     page_title="Agri Weather Platform",
@@ -13,32 +13,41 @@ st.set_page_config(
     layout="wide"
 )
 
+# =====================================================
+# MOBILE CSS
+# =====================================================
+st.markdown("""
+<style>
+.block-container{
+    padding-top:1rem;
+    padding-bottom:1rem;
+}
+
+@media (max-width: 768px) {
+    .block-container{
+        padding-left:0.6rem;
+        padding-right:0.6rem;
+    }
+
+    h1{
+        font-size:1.7rem !important;
+    }
+
+    h2,h3{
+        font-size:1.2rem !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =====================================================
+# HEADER
+# =====================================================
 st.title("🌿 Agri Weather Platform")
-st.caption("Prévisions météo • Aide à la décision agricole")
+st.caption("Prévisions météo agricoles en temps réel")
 
 # =====================================================
-# ICONES METEO
-# =====================================================
-def weather_icon(desc):
-    txt = str(desc).lower()
-
-    if "thunder" in txt:
-        return "⛈️"
-    if "snow" in txt:
-        return "❄️"
-    if "rain" in txt or "drizzle" in txt:
-        return "🌧️"
-    if "mist" in txt or "fog" in txt:
-        return "🌫️"
-    if "clear" in txt:
-        return "☀️"
-    if "cloud" in txt:
-        return "☁️"
-
-    return "🌤️"
-
-# =====================================================
-# LOAD DATA CLOUD
+# DB LOAD
 # =====================================================
 @st.cache_data(ttl=300)
 def load_data():
@@ -85,26 +94,19 @@ if df.empty:
     st.warning("Aucune donnée disponible.")
     st.stop()
 
-# datetime clean
-df["forecast_time"] = pd.to_datetime(
-    df["forecast_time"],
-    errors="coerce"
-)
-
+df["forecast_time"] = pd.to_datetime(df["forecast_time"], errors="coerce")
 df = df.dropna(subset=["forecast_time"])
 
 if df.empty:
     st.warning("Aucune donnée datée disponible.")
     st.stop()
 
-df["icon"] = df["description"].apply(weather_icon)
-
 # =====================================================
 # SIDEBAR
 # =====================================================
 st.sidebar.header("⚙️ Filtres")
 
-cities = sorted(df["city"].dropna().unique())
+cities = sorted(df["city"].unique())
 
 selected_cities = st.sidebar.multiselect(
     "🏙️ Villes",
@@ -112,7 +114,6 @@ selected_cities = st.sidebar.multiselect(
     default=cities
 )
 
-# dates
 today = date.today()
 
 min_day = df["forecast_time"].min().date()
@@ -127,7 +128,7 @@ if default_day > max_day:
     default_day = max_day
 
 date_range = st.sidebar.date_input(
-    "📅 Jour ou période",
+    "📅 Jour / période",
     value=(default_day, default_day),
     min_value=min_day,
     max_value=max_day
@@ -136,11 +137,9 @@ date_range = st.sidebar.date_input(
 if not isinstance(date_range, tuple):
     start_date = date_range
     end_date = date_range
-
 elif len(date_range) == 1:
     start_date = date_range[0]
     end_date = date_range[0]
-
 else:
     start_date = date_range[0]
     end_date = date_range[1]
@@ -167,34 +166,35 @@ latest_df = filtered_df[
     filtered_df["forecast_time"] == latest_ts
 ]
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2 = st.columns(2)
+c3, c4 = st.columns(2)
 
 with c1:
     st.metric(
-        "🌡️ Température",
-        f"{latest_df['temperature'].mean():.1f} °C"
+        "🌡️ Temp",
+        f"{latest_df['temperature'].mean():.1f}°C"
     )
 
 with c2:
     st.metric(
         "🥵 Ressenti",
-        f"{latest_df['feels_like'].mean():.1f} °C"
+        f"{latest_df['feels_like'].mean():.1f}°C"
     )
 
 with c3:
     st.metric(
         "💨 Vent",
-        f"{latest_df['wind_speed'].mean():.1f} km/h"
+        f"{latest_df['wind_speed'].mean():.0f} km/h"
     )
 
 with c4:
     st.metric(
         "💧 Humidité",
-        f"{latest_df['humidity'].mean():.0f} %"
+        f"{latest_df['humidity'].mean():.0f}%"
     )
 
 st.caption(
-    f"Dernière mise à jour : {latest_ts.strftime('%d/%m/%Y %H:%M')}"
+    f"MAJ : {latest_ts.strftime('%d/%m/%Y %H:%M')}"
 )
 
 st.divider()
@@ -205,13 +205,13 @@ st.divider()
 tab1, tab2 = st.tabs(["📈 Dashboard", "🚨 Alertes"])
 
 # =====================================================
-# TAB DASHBOARD
+# DASHBOARD
 # =====================================================
 with tab1:
 
-    # -----------------------------------------------
+    # ---------------------------------
     # TEMPERATURE
-    # -----------------------------------------------
+    # ---------------------------------
     st.subheader("🌡️ Température")
 
     fig = px.line(
@@ -219,90 +219,101 @@ with tab1:
         x="forecast_time",
         y="temperature",
         color="city",
-        markers=True
+        markers=True,
+        custom_data=[
+            "feels_like",
+            "humidity",
+            "wind_speed"
+        ]
     )
 
-    positions = [
-        "top center",
-        "bottom center",
-        "middle left"
-    ]
-
-    for i, trace in enumerate(fig.data):
-
-        city = trace.name
-
-        city_df = filtered_df[
-            filtered_df["city"] == city
-        ].sort_values("forecast_time")
-
-        labels = [
-            f"{icon} {feel:.1f}°"
-            for icon, feel in zip(
-                city_df["icon"],
-                city_df["feels_like"]
-            )
-        ]
-
-        trace.mode = "lines+markers+text"
-        trace.text = labels
-        trace.textposition = positions[i % len(positions)]
-        trace.textfont = dict(size=11)
+    fig.update_traces(
+        line=dict(width=3),
+        marker=dict(size=8),
+        hovertemplate=
+        "<b>%{fullData.name}</b><br>" +
+        "%{x}<br>" +
+        "Temp : %{y:.1f}°C<br>" +
+        "Ressenti : %{customdata[0]:.1f}°C<br>" +
+        "Humidité : %{customdata[1]:.0f}%<br>" +
+        "Vent : %{customdata[2]:.0f} km/h<br>" +
+        "<extra></extra>"
+    )
 
     fig.update_layout(
-        height=500,
+        height=620,
         hovermode="x unified",
-        xaxis_title="Date / Heure",
+        legend=dict(
+            orientation="h",
+            y=-0.25
+        ),
+        margin=dict(
+            l=10,
+            r=10,
+            t=20,
+            b=80
+        ),
+        xaxis_title="",
         yaxis_title="°C"
     )
 
     fig.update_xaxes(
+        nticks=6,
         tickformat="%d/%m %H:%M",
         rangeslider_visible=False
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # -----------------------------------------------
-    # PLUIE
-    # -----------------------------------------------
+    # ---------------------------------
+    # PRECIPITATIONS
+    # ---------------------------------
     st.subheader("🌧️ Précipitations")
 
-    rain_df = filtered_df.copy()
-    rain_df["prob_txt"] = (
-        (rain_df["pop"] * 100)
-        .round(0)
-        .astype(int)
-        .astype(str) + "%"
-    )
-
-    fig2 = px.bar(
-        rain_df,
+    rain_fig = px.bar(
+        filtered_df,
         x="forecast_time",
         y="rain",
         color="city",
         barmode="group",
-        text="prob_txt"
+        custom_data=["pop"]
     )
 
-    fig2.update_traces(textposition="outside")
+    rain_fig.update_traces(
+        hovertemplate=
+        "<b>%{fullData.name}</b><br>" +
+        "%{x}<br>" +
+        "Pluie : %{y:.1f} mm<br>" +
+        "Probabilité : %{customdata[0]:.0%}<br>" +
+        "<extra></extra>"
+    )
 
-    fig2.update_layout(
-        height=430,
+    rain_fig.update_layout(
+        height=520,
         hovermode="x unified",
-        xaxis_title="Date / Heure",
-        yaxis_title="mm / 3h"
+        legend=dict(
+            orientation="h",
+            y=-0.25
+        ),
+        margin=dict(
+            l=10,
+            r=10,
+            t=20,
+            b=80
+        ),
+        xaxis_title="",
+        yaxis_title="mm"
     )
 
-    fig2.update_xaxes(
-        tickformat="%d/%m %H:%M",
-        rangeslider_visible=False
+    rain_fig.update_xaxes(
+        nticks=6,
+        tickformat="%d/%m %H:%M"
     )
 
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(rain_fig, use_container_width=True)
 
 # =====================================================
-# TAB ALERTES
+# ALERTES
 # =====================================================
 with tab2:
 
@@ -310,14 +321,16 @@ with tab2:
 
     alerts = 0
 
-    frost = filtered_df[filtered_df["risk_frost"] == True]
+    frost = filtered_df[
+        filtered_df["risk_frost"] == True
+    ]
 
     for _, row in frost.iterrows():
         alerts += 1
         st.error(
-            f"❄️ Gel possible à {row['city']} le "
-            f"{row['forecast_time'].strftime('%d/%m %H:%M')} | "
-            f"Règle : température < 2°C"
+            f"❄️ {row['city']} • "
+            f"{row['forecast_time'].strftime('%d/%m %H:%M')} \n"
+            f"Température < 2°C"
         )
 
     irrig = filtered_df[
@@ -327,19 +340,21 @@ with tab2:
     for _, row in irrig.iterrows():
         alerts += 1
         st.warning(
-            f"🚿 Irrigation recommandée à {row['city']} le "
-            f"{row['forecast_time'].strftime('%d/%m %H:%M')} | "
-            f"Règle : chaud + sec + peu de pluie"
+            f"🚿 {row['city']} • "
+            f"{row['forecast_time'].strftime('%d/%m %H:%M')} \n"
+            f"Irrigation conseillée"
         )
 
-    heavy_rain = filtered_df[filtered_df["rain"] > 10]
+    heavy_rain = filtered_df[
+        filtered_df["rain"] > 10
+    ]
 
     for _, row in heavy_rain.iterrows():
         alerts += 1
         st.info(
-            f"🌧️ Forte pluie à {row['city']} le "
-            f"{row['forecast_time'].strftime('%d/%m %H:%M')} | "
-            f"Règle : pluie > 10 mm / 3h"
+            f"🌧️ {row['city']} • "
+            f"{row['forecast_time'].strftime('%d/%m %H:%M')} \n"
+            f"Pluie > 10 mm"
         )
 
     strong_wind = filtered_df[
@@ -349,10 +364,10 @@ with tab2:
     for _, row in strong_wind.iterrows():
         alerts += 1
         st.warning(
-            f"💨 Vent fort à {row['city']} le "
-            f"{row['forecast_time'].strftime('%d/%m %H:%M')} | "
-            f"Règle : vent > 60 km/h"
+            f"💨 {row['city']} • "
+            f"{row['forecast_time'].strftime('%d/%m %H:%M')} \n"
+            f"Vent > 60 km/h"
         )
 
     if alerts == 0:
-        st.success("✅ Aucune alerte sur la période.")
+        st.success("✅ Aucune alerte.")
