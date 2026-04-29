@@ -124,12 +124,10 @@ selected_cities = st.sidebar.multiselect(
 sections = st.sidebar.multiselect(
     "📱 Modules visibles",
     [
-        "Conditions actuelles",
         "Prévisions",
         "Alertes"
     ],
     default=[
-        "Conditions actuelles",
         "Prévisions"
     ]
 )
@@ -211,29 +209,6 @@ plotly_config = {
     "doubleClick": False
 }
 
-# =====================================================
-# CONDITIONS ACTUELLES
-# =====================================================
-if "Conditions actuelles" in sections:
-
-    st.subheader("🌍 Conditions actuelles")
-
-    cols = st.columns(len(latest_df))
-
-    for i, (_, row) in enumerate(latest_df.iterrows()):
-
-        with cols[i]:
-            st.markdown(
-                f"""
-                **{row['city']}**
-
-                # {row['icon']} {row['temperature']:.1f}°
-
-                Ressenti {row['feels_like']:.1f}°  
-                💨 {row['wind_speed']:.0f} km/h  
-                💧 {row['humidity']:.0f}%
-                """
-            )
 
 # =====================================================
 # PREVISIONS
@@ -420,11 +395,3 @@ if "Alertes" in sections:
     if alerts == 0:
         st.success("✅ Aucune alerte détectée.")
 
-# =====================================================
-# FOOTER
-# =====================================================
-st.divider()
-
-st.caption(
-    f"Dernière mise à jour : {latest_ts.strftime('%d/%m/%Y %H:%M')}"
-)
