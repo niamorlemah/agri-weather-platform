@@ -192,46 +192,51 @@ latest_df["icon"] = latest_df["description"].apply(meteo_icon)
 
 
 # =====================================================
-# B - TIMELINE DU JOUR
+# B - TIMELINE MULTI-JOURS
 # =====================================================
 
-st.subheader("📅 Prévisions du jour")
+st.subheader("📅 Prévisions")
 
-today_df = filtered_df[
-    filtered_df["forecast_time"].dt.date == latest_ts.date()
-].copy()
-
-today_df["icon"] = today_df["description"].apply(meteo_icon)
+timeline_df = filtered_df.copy()
+timeline_df["icon"] = timeline_df["description"].apply(meteo_icon)
 
 for city in selected_cities:
 
-    city_df = today_df[
-        today_df["city"] == city
+    city_df = timeline_df[
+        timeline_df["city"] == city
     ].sort_values("forecast_time")
 
     if city_df.empty:
         continue
 
-    st.markdown(f"### {city}")
+    st.markdown(f"## {city}")
 
-    cols = st.columns(len(city_df))
+    unique_days = city_df["forecast_time"].dt.date.unique()
 
-    for i, (_, row) in enumerate(city_df.iterrows()):
+    for day in unique_days:
 
-        with cols[i]:
-            st.markdown(
-                f"""
-                **{row['forecast_time'].strftime('%Hh')}**  
-                {row['icon']}  
-                **{row['temperature']:.0f}°**
-                """
-            )
+        day_df = city_df[
+            city_df["forecast_time"].dt.date == day
+        ]
 
-st.caption(
-    f"Dernière mise à jour : {latest_ts.strftime('%d/%m/%Y %H:%M')}"
-)
+        st.markdown(
+            f"**📆 {pd.to_datetime(day).strftime('%A %d/%m')}**"
+        )
 
-st.divider()
+        cols = st.columns(len(day_df))
+
+        for i, (_, row) in enumerate(day_df.iterrows()):
+
+            with cols[i]:
+                st.markdown(
+                    f"""
+                    {row['forecast_time'].strftime('%Hh')}  
+                    {row['icon']}  
+                    **{row['temperature']:.0f}°**
+                    """
+                )
+
+        st.markdown("---")
 
 # =====================================================
 # TABS
